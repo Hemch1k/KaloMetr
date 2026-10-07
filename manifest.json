@@ -1,0 +1,19 @@
+{
+  "name": "КалоМетр — дневник калорий",
+  "short_name": "КалоМетр",
+  "description": "Ежедневный подсчёт калорий, распознавание еды по фото и статистика.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1512",
+  "theme_color": "#0e1512",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0e1512" />
+  <title>КалоМетр — дневник калорий</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍎</text></svg>" />
+</head>
+<body>
+  <div class="app">
+    <!-- Боковое меню (десктоп) -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-logo">🍎</span>
+        <span class="brand-name">КалоМетр</span>
+      </div>
+      <nav class="side-nav">
+        <button class="side-link active" data-screen="today">
+          <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"/></svg>
+          <span>Сегодня</span>
+        </button>
+        <button class="side-link" data-screen="history">
+          <svg viewBox="0 0 24 24"><path d="M4 20V10m5 10V4m5 16v-7m5 7V8" fill="none" stroke-width="2.2" stroke-linecap="round"/></svg>
+          <span>История</span>
+        </button>
+        <button class="side-link" data-screen="settings">
+          <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.05A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.05A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.05A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9v0c.2.6.76 1 1.4 1H21a2 2 0 1 1 0 4h-.05a1.7 1.7 0 0 0-1.55 1Z" fill="none" stroke-width="1.7"/></svg>
+          <span>Настройки</span>
+        </button>
+      </nav>
+      <button class="btn btn-primary side-add" id="sideAddBtn">
+        <span>＋</span> Добавить
+      </button>
+    </aside>
+
+    <main class="main">
+      <!-- ЭКРАН: СЕГОДНЯ -->
+      <section class="screen active" id="screen-today">
+        <header class="screen-head">
+          <div class="date-nav">
+            <button class="icon-btn" id="prevDay" aria-label="Предыдущий день">‹</button>
+            <div class="date-label">
+              <h1 id="dayTitle">Сегодня</h1>
+              <span id="daySubtitle" class="muted"></span>
+            </div>
+            <button class="icon-btn" id="nextDay" aria-label="Следующий день">›</button>
+          </div>
+          <button class="icon-btn theme-toggle" id="themeToggle" title="Сменить тему">🌙</button>
+        </header>
+
+        <div class="summary-card card">
+          <div class="ring-wrap">
+            <svg class="ring" viewBox="0 0 120 120">
+              <defs>
+                <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#22c55e" />
+                  <stop offset="100%" stop-color="#14b8a6" />
+                </linearGradient>
+              </defs>
+              <circle class="ring-bg" cx="60" cy="60" r="52" />
+              <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52" />
+            </svg>
+            <div class="ring-center">
+              <strong id="kcalLeft">0</strong>
+              <span>осталось</span>
+            </div>
+          </div>
+          <div class="summary-side">
+            <div class="summary-row">
+              <div class="stat">
+                <span class="stat-val" id="kcalEaten">0</span>
+                <span class="stat-lbl">съедено</span>
+              </div>
+              <div class="stat">
+                <span class="stat-val" id="kcalGoal">2000</span>
+                <span class="stat-lbl">цель, ккал</span>
+              </div>
+              <div class="stat">
+                <span class="stat-val" id="kcalBurned">0</span>
+                <span class="stat-lbl">остаток %</span>
+              </div>
+            </div>
+            <div class="macros">
+              <div class="macro" data-macro="p">
+                <div class="macro-top"><span>Белки</span><b id="macroP">0 / 0 г</b></div>
+                <div class="bar"><i id="barP" style="--w:0%"></i></div>
+              </div>
+              <div class="macro" data-macro="f">
+                <div class="macro-top"><span>Жиры</span><b id="macroF">0 / 0 г</b></div>
+                <div class="bar"><i id="barF" style="--w:0%"></i></div>
+              </div>
+              <div class="macro" data-macro="c">
+                <div class="macro-top"><span>Углеводы</span><b id="macroC">0 / 0 г</b></div>
+                <div class="bar"><i id="barC" style="--w:0%"></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="meals" id="meals"></div>
+      </section>
+
+      <!-- ЭКРАН: ИСТОРИЯ -->
+      <section class="screen" id="screen-history">
+        <header class="screen-head">
+          <div class="date-label">
+            <h1>История</h1>
+            <span class="muted">ваш прогресс по дням</span>
+          </div>
+        </header>
+
+        <div class="stats-grid">
+          <div class="card mini-card"><span class="mini-val" id="statAvg">—</span><span class="mini-lbl">среднее за 7 дней</span></div>
+          <div class="card mini-card"><span class="mini-val" id="statDays">0</span><span class="mini-lbl">дней в дневнике</span></div>
+          <div class="card mini-card"><span class="mini-val" id="statStreak">0</span><span class="mini-lbl">серия дней</span></div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-title">Последние 7 дней <span class="muted">ккал</span></div>
+          <div class="chart" id="chart7"></div>
+        </div>
+
+        <div class="card list-card">
+          <div class="card-title">Все дни</div>
+          <div class="day-list" id="dayList"></div>
+        </div>
+      </section>
+
+      <!-- ЭКРАН: НАСТРОЙКИ -->
+      <section class="screen" id="screen-settings">
+        <header class="screen-head">
+          <div class="date-label">
+            <h1>Настройки</h1>
+            <span class="muted">цели, профиль и данные</span>
+          </div>
+        </header>
+
+        <div class="card settings-card">
+          <div class="card-title">🎯 Дневная цель</div>
+          <div class="field-grid">
+            <label class="field"><span>Калории, ккал</span><input type="number" id="setGoal" min="500" max="10000" /></label>
+            <label class="field"><span>Белки, г</span><input type="number" id="setP" min="0" max="500" /></label>
+            <label class="field"><span>Жиры, г</span><input type="number" id="setF" min="0" max="500" /></label>
+            <label class="field"><span>Углеводы, г</span><input type="number" id="setC" min="0" max="1000" /></label>
+          </div>
+        </div>
+
+        <div class="card settings-card">
+          <div class="card-title">👤 Профиль <span class="muted">для расчёта нормы</span></div>
+          <div class="field-grid">
+            <label class="field"><span>Пол</span>
+              <select id="setSex"><option value="male">Мужской</option><option value="female">Женский</option></select>
+            </label>
+            <label class="field"><span>Возраст</span><input type="number" id="setAge" min="10" max="100" /></label>
+            <label class="field"><span>Рост, см</span><input type="number" id="setHeight" min="100" max="250" /></label>
+            <label class="field"><span>Вес, кг</span><input type="number" id="setWeight" min="30" max="300" step="0.1" /></label>
+            <label class="field"><span>Активность</span>
+              <select id="setActivity">
+                <option value="1.2">Сидячая</option>
+                <option value="1.375">Лёгкая (1–3 тренировки)</option>
+                <option value="1.55">Средняя (3–5 тренировок)</option>
+                <option value="1.725">Высокая (6–7 тренировок)</option>
+                <option value="1.9">Очень высокая</option>
+              </select>
+            </label>
+            <label class="field"><span>Цель</span>
+              <select id="setPlan">
+                <option value="lose">Похудение (−15%)</option>
+                <option value="keep">Поддержание</option>
+                <option value="gain">Набор (+15%)</option>
+              </select>
+            </label>
+          </div>
+          <button class="btn btn-ghost" id="calcGoalBtn">Рассчитать цель по профилю</button>
+        </div>
+
+        <div class="card settings-card">
+          <div class="card-title">📷 Распознавание еды по фото</div>
+          <p class="hint">Используется модель Google Gemini (Flash). Ключ хранится <b>только в вашем браузере</b>. Получить бесплатный ключ:
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a></p>
+          <label class="field"><span>API-ключ Gemini</span>
+            <input type="password" id="setApiKey" placeholder="AIza..." autocomplete="off" />
+          </label>
+          <div class="row-gap">
+            <button class="btn btn-ghost" id="toggleKeyBtn">Показать</button>
+            <button class="btn btn-ghost" id="testKeyBtn">Проверить ключ</button>
+          </div>
+          <p class="hint" id="keyStatus"></p>
+        </div>
+
+        <div class="card settings-card">
+          <div class="card-title">💾 Данные</div>
+          <div class="row-gap">
+            <button class="btn btn-ghost" id="exportBtn">Экспорт JSON</button>
+            <label class="btn btn-ghost file-btn">Импорт JSON<input type="file" id="importFile" accept="application/json" hidden /></label>
+            <button class="btn btn-danger" id="resetBtn">Очистить всё</button>
+          </div>
+          <p class="hint">Данные хранятся локально на устройстве. Экспорт пригодится для переноса на другой телефон или компьютер.</p>
+        </div>
+
+        <p class="muted footer-note">КалоМетр · работает офлайн · данные не покидают устройство</p>
+      </section>
+    </main>
+
+    <!-- Нижняя навигация (мобайл) -->
+    <nav class="bottom-nav">
+      <button class="bn-link active" data-screen="today">
+        <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"/></svg>
+        <span>Сегодня</span>
+      </button>
+      <button class="bn-add" id="fabAdd" aria-label="Добавить еду">＋</button>
+      <button class="bn-link" data-screen="history">
+        <svg viewBox="0 0 24 24"><path d="M4 20V10m5 10V4m5 16v-7m5 7V8" fill="none" stroke-width="2.2" stroke-linecap="round"/></svg>
+        <span>История</span>
+      </button>
+      <button class="bn-link" data-screen="settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke-width="2"/><path d="M12 2.8v2.4M12 18.8v2.4M4.5 4.5l1.7 1.7M17.8 17.8l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.5 19.5l1.7-1.7M17.8 6.2l1.7-1.7" fill="none" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Настройки</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ШТОРКА: ДОБАВИТЬ ЕДУ -->
+  <div class="overlay" id="addOverlay">
+    <div class="sheet" id="addSheet" role="dialog" aria-label="Добавить еду">
+      <div class="sheet-grip"></div>
+      <div class="sheet-head">
+        <h2>Добавить еду</h2>
+        <button class="icon-btn" data-close="addOverlay">✕</button>
+      </div>
+
+      <div class="tabs" id="addTabs">
+        <button class="tab active" data-tab="search">🔎 Поиск</button>
+        <button class="tab" data-tab="photo">📷 Фото</button>
+        <button class="tab" data-tab="fav">⭐ Избранное</button>
+      </div>
+
+      <!-- Поиск -->
+      <div class="tab-pane active" id="pane-search">
+        <div class="search-box">
+          <input type="search" id="searchInput" placeholder="Например: гречка, банан, творог..." autocomplete="off" />
+        </div>
+        <div class="chips" id="catChips"></div>
+        <div class="results" id="searchResults"></div>
+      </div>
+
+      <!-- Избранное -->
+      <div class="tab-pane" id="pane-fav">
+        <div class="results" id="favResults"></div>
+      </div>
+
+      <!-- Фото -->
+      <div class="tab-pane" id="pane-photo">
+        <label class="dropzone" id="dropzone">
+          <input type="file" id="photoInput" accept="image/*" capture="environment" hidden />
+          <div class="dz-inner" id="dzInner">
+            <span class="dz-icon">📷</span>
+            <b>Сфотографировать или выбрать фото</b>
+            <span class="muted">AI определит продукты и порции</span>
+          </div>
+          <img class="dz-preview" id="dzPreview" alt="" hidden />
+        </label>
+        <div class="photo-status muted" id="photoStatus"></div>
+        <div id="photoResults" hidden>
+          <div class="notice">
+            Проверьте и поправьте результат: название, массу и калорийность на 100 г.
+          </div>
+          <div id="photoItems" class="photo-items"></div>
+          <div class="photo-actions">
+            <button class="btn btn-ghost" id="photoAddMoreBtn">＋ ещё продукт</button>
+            <label class="field inline-field"><span>Приём пищи</span>
+              <select id="photoMeal"></select>
+            </label>
+          </div>
+          <div class="photo-total" id="photoTotal">Итого: 0 ккал</div>
+          <button class="btn btn-primary wide" id="photoConfirmBtn">Добавить в дневник</button>
+        </div>
+        <button class="btn btn-primary wide" id="photoRecognizeBtn" hidden>🔍 Распознать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ШТОРКА: ПОРЦИЯ / РЕДАКТИРОВАНИЕ -->
+  <div class="overlay" id="portionOverlay">
+    <div class="sheet sheet-sm" id="portionSheet" role="dialog" aria-label="Порция">
+      <div class="sheet-grip"></div>
+      <div class="sheet-head">
+        <h2 id="portionTitle">Порция</h2>
+        <button class="icon-btn" data-close="portionOverlay">✕</button>
+      </div>
+      <div class="portion-food">
+        <span id="portionName">—</span>
+        <span class="muted" id="portionPer100">—</span>
+      </div>
+
+      <label class="field"><span>Вес порции, г</span>
+        <div class="grams-row">
+          <button class="stepper" data-step="-10">−10</button>
+          <button class="stepper" data-step="-50">−50</button>
+          <input type="number" id="portionGrams" min="1" max="5000" value="100" />
+          <button class="stepper" data-step="50">＋50</button>
+          <button class="stepper" data-step="10">＋10</button>
+        </div>
+      </label>
+      <div class="presets" id="portionPresets">
+        <button class="chip" data-g="50">50 г</button>
+        <button class="chip" data-g="100">100 г</button>
+        <button class="chip" data-g="150">150 г</button>
+        <button class="chip" data-g="200">200 г</button>
+        <button class="chip" data-g="300">300 г</button>
+      </div>
+
+      <div class="portion-macros">
+        <div class="pm big"><b id="portionKcal">0</b><span>ккал</span></div>
+        <div class="pm"><b id="portionP">0</b><span>белки</span></div>
+        <div class="pm"><b id="portionF">0</b><span>жиры</span></div>
+        <div class="pm"><b id="portionC">0</b><span>углев.</span></div>
+      </div>
+
+      <label class="field"><span>Приём пищи</span><select id="portionMeal"></select></label>
+
+      <div class="row-gap" id="portionExtra">
+        <label class="field grow"><span>Название</span><input type="text" id="portionNameInput" /></label>
+        <label class="field grow"><span>Ккал / 100 г</span><input type="number" id="portionKcal100" min="0" max="900" /></label>
+      </div>
+
+      <div class="row-gap">
+        <button class="btn btn-primary grow" id="portionSaveBtn">Добавить</button>
+        <button class="btn btn-danger" id="portionDeleteBtn" hidden>Удалить</button>
+      </div>
+      <p class="hint" id="portionHint"></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="js/foods.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/recognition.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

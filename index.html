@@ -142,6 +142,51 @@
         </header>
 
         <div class="card settings-card">
+          <div class="card-title">☁️ Аккаунт <span class="muted">данные в облаке</span></div>
+          <div id="accountSetup" class="notice" hidden>
+            Чтобы включить облако: создайте проект на
+            <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a>,
+            добавьте веб-приложение, скопируйте конфиг в <b>js/firebase-config.js</b>,
+            включите вход Email/Password и Google в Authentication, создайте Firestore с правилами
+            <code>request.auth.uid == userId</code> и добавьте домен <b>hemch1k.github.io</b> в Authorized domains.
+          </div>
+          <div id="accountGuest">
+            <p class="hint">Сейчас дневник хранится только в этом браузере. Войдите — и записи, цели и избранное будут синхронизироваться между телефоном и компьютером.</p>
+            <div class="field-grid">
+              <label class="field"><span>E-mail</span>
+                <input type="email" id="authEmail" placeholder="you@mail.com" autocomplete="email" />
+              </label>
+              <label class="field"><span>Пароль</span>
+                <input type="password" id="authPass" placeholder="минимум 6 символов" autocomplete="current-password" />
+              </label>
+            </div>
+            <div class="row-gap">
+              <button class="btn btn-primary" id="authLoginBtn">Войти</button>
+              <button class="btn btn-ghost" id="authRegisterBtn">Создать аккаунт</button>
+            </div>
+            <div class="row-gap" style="margin-top:10px">
+              <button class="btn btn-ghost google-btn" id="authGoogleBtn">
+                <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2.5 24 .5 14.6.5 6.5 5.9 2.6 13.8l7.8 6C12.3 13.9 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.6-4.9 7.3l7.6 5.9c4.4-4.1 7.1-10.2 7.1-17.7z"/><path fill="#FBBC05" d="M10.4 28.2c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6C1 16.1 0 19.9 0 24s1 7.9 2.6 11.2l7.8-7z"/><path fill="#34A853" d="M24 47.5c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.8 2.3-8.3 2.3-6.4 0-11.7-4.4-13.6-10.3l-7.8 6C6.5 42.1 14.6 47.5 24 47.5z"/></svg>
+                Войти через Google
+              </button>
+            </div>
+            <p class="hint" id="authStatus"></p>
+          </div>
+          <div id="accountUser" hidden>
+            <div class="acc-user">
+              <img class="acc-avatar" id="accAvatar" alt="" hidden />
+              <div class="acc-id"><b id="accName"></b><div class="muted" id="accEmail"></div></div>
+            </div>
+            <p class="hint" id="accSyncStatus"></p>
+            <div class="row-gap">
+              <button class="btn btn-ghost" id="accSyncBtn">↻ Синхронизировать</button>
+              <button class="btn btn-danger" id="authLogoutBtn">Выйти</button>
+            </div>
+            <p class="hint hint-warn" id="accPending" hidden>⚠ Есть неотправленные изменения — нажмите «Синхронизировать».</p>
+          </div>
+        </div>
+
+        <div class="card settings-card">
           <div class="card-title">🎯 Дневная цель</div>
           <div class="field-grid">
             <label class="field"><span>Калории, ккал</span><input type="number" id="setGoal" min="500" max="10000" /></label>
@@ -352,6 +397,8 @@
   <script src="js/foods.js"></script>
   <script src="js/off.js"></script>
   <script src="js/store.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/cloud.js"></script>
   <script src="js/recognition.js"></script>
   <script src="js/app.js"></script>
 </body>

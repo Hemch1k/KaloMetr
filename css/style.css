@@ -225,6 +225,16 @@ h1 { font-size: 1.5rem; margin: 0; font-weight: 800; letter-spacing: -.02em; }
 
 /* ===== Настройки ===== */
 .settings-card { margin-bottom: 16px; }
+.hint-warn { color: var(--warn); }
+#accountSetup code { background: var(--bg-2); padding: 1px 6px; border-radius: 6px; font-size: .82em; }
+.acc-user { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.acc-avatar { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid var(--line); }
+.acc-id b { font-size: 1.02rem; }
+.acc-id .muted { font-size: .8rem; }
+.google-btn { gap: 10px; }
+.google-btn svg { flex: none; }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+#authStatus:empty { display: none; }
 .field { display: flex; flex-direction: column; gap: 6px; font-size: .85rem; color: var(--muted); }
 .field input, .field select {
   background: var(--bg-2); border: 1px solid var(--line); border-radius: 13px;

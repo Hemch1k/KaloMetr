@@ -816,12 +816,14 @@
     });
 
     $('#resetBtn').addEventListener('click', () => {
-      if (!confirm('Удалить ВСЕ данные дневника? Это действие необратимо.')) return;
+      if (!confirm('Удалить ВСЕ данные дневника (включая облако, если вы вошли)? Это действие необратимо.')) return;
+      const wasInCloud = typeof Cloud !== 'undefined' && Cloud.isSignedIn();
       Store.reset();
+      if (wasInCloud) Cloud.wipe();
       state.foodCache = null;
       applyTheme();
       renderToday(); renderSettings();
-      toast('Все данные удалены');
+      toast(wasInCloud ? 'Данные удалены на устройстве и в облаке' : 'Все данные удалены');
     });
   }
 
@@ -943,6 +945,14 @@
   function init() {
     if (init.done) return;
     init.done = true;
+
+    // Облако подтянуло новые данные → перерисовать экраны
+    document.addEventListener('cloud-data-changed', () => {
+      state.foodCache = null;
+      renderToday();
+      if ($('#screen-settings').classList.contains('active')) renderSettings();
+    });
+
     applyTheme();
     fillMealSelects();
     renderCatChips();

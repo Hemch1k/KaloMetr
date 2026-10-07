@@ -1,4 +1,4 @@
-const CACHE = 'kalometr-v2';
+const CACHE = 'kalometr-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,8 @@ const ASSETS = [
   './js/foods.js',
   './js/off.js',
   './js/store.js',
+  './js/firebase-config.js',
+  './js/cloud.js',
   './js/recognition.js',
   './js/app.js',
   './manifest.json',

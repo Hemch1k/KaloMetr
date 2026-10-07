@@ -1,4 +1,4 @@
-const CACHE = 'kalometr-v5';
+const CACHE = 'kalometr-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -15,7 +15,14 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil((async () => {
+    const c = await caches.open(CACHE);
+    await Promise.all(ASSETS.map(async (u) => {
+      const r = await fetch(u, { cache: 'no-cache' });
+      if (r.ok) await c.put(u, r);
+    }));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (e) => {
@@ -25,16 +32,25 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// network-first: онлайн — всегда свежие файлы, офлайн — из кеша
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return; // внешние API (Open Food Facts, Supabase) не трогаем
-  e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request).then((res) => {
-      if (e.request.method === 'GET' && res.ok) {
+  if (e.request.method !== 'GET') return;
+  e.respondWith((async () => {
+    try {
+      const res = await fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' });
+      if (res.ok) {
         const clone = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, clone));
+        const c = await caches.open(CACHE);
+        c.put(e.request, clone).catch(() => {});
       }
       return res;
-    }).catch(() => caches.match('./index.html')))
-  );
+    } catch (err) {
+      const cached = await caches.match(e.request);
+      if (cached) return cached;
+      if (e.request.mode === 'navigate') return (await caches.match('./index.html')) || Response.error();
+      return Response.error();
+    }
+  })());
 });

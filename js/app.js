@@ -408,6 +408,7 @@
   function resetPhoto() {
     state.photo = { file: null, items: [] };
     $('#photoInput').value = '';
+    $('#photoCameraInput').value = '';
     $('#dzPreview').hidden = true;
     $('#dzInner').hidden = false;
     $('#photoResults').hidden = true;
@@ -847,6 +848,7 @@
 
     // фото
     $('#photoInput').addEventListener('change', (e) => onPhotoSelected(e.target.files[0]));
+    $('#photoCameraInput').addEventListener('change', (e) => onPhotoSelected(e.target.files[0]));
     $('#photoRecognizeBtn').addEventListener('click', runRecognition);
     $('#photoConfirmBtn').addEventListener('click', confirmPhoto);
     $('#photoAddMoreBtn').addEventListener('click', () => {

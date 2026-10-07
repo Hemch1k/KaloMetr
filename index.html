@@ -257,15 +257,22 @@
 
       <!-- Фото -->
       <div class="tab-pane" id="pane-photo">
-        <label class="dropzone" id="dropzone">
-          <input type="file" id="photoInput" accept="image/*" capture="environment" hidden />
-          <div class="dz-inner" id="dzInner">
-            <span class="dz-icon">📷</span>
-            <b>Сфотографировать или выбрать фото</b>
-            <span class="muted">AI определит продукты и порции</span>
+        <div class="dropzone" id="dropzone">
+          <label class="dz-main" for="photoInput">
+            <div class="dz-inner" id="dzInner">
+              <span class="dz-icon">📷</span>
+              <b>Выберите фото еды</b>
+              <span class="muted">Из галереи или снимите камерой</span>
+            </div>
+            <img class="dz-preview" id="dzPreview" alt="" hidden />
+          </label>
+          <div class="dz-actions">
+            <label class="btn btn-ghost" for="photoInput">🖼️ Из галереи</label>
+            <label class="btn btn-primary" for="photoCameraInput">📷 Снять фото</label>
           </div>
-          <img class="dz-preview" id="dzPreview" alt="" hidden />
-        </label>
+          <input type="file" id="photoInput" accept="image/*" hidden />
+          <input type="file" id="photoCameraInput" accept="image/*" capture="environment" hidden />
+        </div>
         <div class="photo-status muted" id="photoStatus"></div>
         <div id="photoResults" hidden>
           <div class="notice">

@@ -303,13 +303,19 @@ h1 { font-size: 1.5rem; margin: 0; font-weight: 800; letter-spacing: -.02em; }
 /* Дропзона фото */
 .dropzone {
   display: block; border: 2px dashed var(--line); border-radius: 18px;
-  padding: 26px 16px; text-align: center; cursor: pointer; transition: .16s;
+  padding: 22px 16px 16px; text-align: center; transition: .16s;
   background: var(--bg-2); position: relative; overflow: hidden;
 }
 .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+.dz-main { display: block; cursor: pointer; }
 .dz-inner { display: flex; flex-direction: column; gap: 5px; align-items: center; }
 .dz-icon { font-size: 2rem; }
-.dz-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.dz-preview {
+  display: block; width: 100%; max-height: 200px; object-fit: contain;
+  border-radius: 14px; margin-top: 12px;
+}
+.dz-actions { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+.dz-actions .btn { padding: 11px 16px; cursor: pointer; }
 .photo-status { margin-top: 10px; font-size: .85rem; min-height: 20px; }
 .photo-status.error { color: var(--danger); }
 .notice {

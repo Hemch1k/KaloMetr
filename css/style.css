@@ -299,6 +299,14 @@ h1 { font-size: 1.5rem; margin: 0; font-weight: 800; letter-spacing: -.02em; }
 .result-fav.on { color: var(--warn); }
 .no-results { text-align: center; color: var(--muted); padding: 26px 10px; font-size: .9rem; }
 .no-results b { display: block; margin-bottom: 6px; color: var(--text); }
+.result-img { width: 28px; height: 28px; border-radius: 9px; object-fit: cover; display: block; }
+.remote-head {
+  display: flex; align-items: center; gap: 4px;
+  font-size: .8rem; color: var(--muted); font-weight: 600;
+  margin: 14px 2px 8px; padding-top: 12px; border-top: 1px dashed var(--line);
+}
+.remote-head[hidden] { display: none; }
+#remoteResults .result { animation: fade .25s ease; }
 
 /* Дропзона фото */
 .dropzone {

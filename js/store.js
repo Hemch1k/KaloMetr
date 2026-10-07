@@ -19,6 +19,7 @@ const Store = (() => {
     },
     entries: {}, // { '2026-10-07': [entry, ...] }
     customFoods: [],
+    offCache: {}, // продуктов, найденных в Open Food Facts, по id
     favorites: [],
     onboardingDone: false,
   });
@@ -109,6 +110,20 @@ const Store = (() => {
     },
 
     favorites: () => state.favorites || [],
+
+    cacheFood(food) {
+      if (!food || !food.id || food.from !== 'off') return;
+      if (!state.offCache) state.offCache = {};
+      state.offCache[food.id] = food;
+      const keys = Object.keys(state.offCache);
+      if (keys.length > 400) {
+        keys.slice(0, keys.length - 400).forEach((k) => delete state.offCache[k]);
+      }
+      save();
+    },
+    cachedFood(id) {
+      return (state.offCache || {})[id];
+    },
     toggleFavorite(id) {
       const favs = state.favorites || [];
       const i = favs.indexOf(id);

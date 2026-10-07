@@ -10,6 +10,8 @@
     editId: null,
     photo: { file: null, items: [] },
     foodCache: null,
+    remoteSeq: 0,
+    remoteTimer: null,
   };
 
   /* ---------- Утилиты ---------- */
@@ -53,7 +55,7 @@
     'Мясо и птица': '🍗', 'Рыба': '🐟', 'Молочные': '🥛', 'Крупы': '🍚',
     'Хлеб': '🍞', 'Овощи': '🥦', 'Фрукты': '🍎', 'Орехи': '🥜',
     'Сладости': '🍫', 'Напитки': '🥤', 'Масла и соусы': '🫒',
-    'Фастфуд': '🍔', 'Готовые блюда': '🍲', 'Яйца': '🥚',
+    'Фастфуд': '🍔', 'Готовые блюда': '🍲', 'Яйца': '🥚', 'Из интернета': '🌍',
   };
   const emojiFor = (f) => f.emoji || CAT_EMOJI[f.cat] || '🍽️';
 
@@ -62,7 +64,8 @@
     return state.foodCache;
   }
   function foodById(id) {
-    return allFoods().find((f) => f.id === id);
+    if (!id) return undefined;
+    return Store.cachedFood(id) || allFoods().find((f) => f.id === id);
   }
 
   /* ---------- Навигация ---------- */
@@ -231,6 +234,7 @@
   function renderSearch(q) {
     const box = $('#searchResults');
     const results = searchFoods(q, state.activeCat);
+    scheduleRemote(q);
 
     if (!results.length) {
       box.innerHTML = `<div class="no-results"><b>Ничего не найдено</b>
@@ -271,6 +275,72 @@
         toast(on ? 'В избранное ★' : 'Убрано из избранного');
         return;
       }
+      openPortionAdd(f);
+    });
+    return btn;
+  }
+
+  function scheduleRemote(q) {
+    const seq = ++state.remoteSeq;
+    const query = (q || '').trim();
+    const head = $('#remoteHead');
+    const box = $('#remoteResults');
+    clearTimeout(state.remoteTimer);
+    box.innerHTML = '';
+
+    if (query.length < 2 || state.activeCat !== 'Все') {
+      head.hidden = true;
+      head.innerHTML = '';
+      return;
+    }
+    head.hidden = false;
+    head.innerHTML = '<span class="spinner"></span>Ищу в открытой базе Open Food Facts…';
+
+    state.remoteTimer = setTimeout(async () => {
+      if (seq !== state.remoteSeq) return;
+      try {
+        const items = await OpenFood.search(query);
+        if (seq !== state.remoteSeq) return;
+        if (!items.length) {
+          head.innerHTML = '🌍 В интернете по запросу ничего не нашлось';
+          return;
+        }
+        head.innerHTML = `🌍 Из интернета · Open Food Facts · ${items.length}`;
+        items.forEach((f) => box.appendChild(remoteRow(f)));
+      } catch (err) {
+        if (seq !== state.remoteSeq) return;
+        head.innerHTML = '🌍 Интернет-поиск сейчас недоступен (нет сети или база перегружена) — показаны локальные результаты';
+      }
+    }, 550);
+  }
+
+  function remoteRow(f) {
+    const favs = Store.favorites();
+    const btn = document.createElement('button');
+    btn.className = 'result';
+    const thumb = f.img
+      ? `<img class="result-img" src="${f.img}" alt="" onerror="this.parentElement.textContent='🌍'">`
+      : '🌍';
+    btn.innerHTML = `
+      <span class="result-emoji">${thumb}</span>
+      <span class="result-main">
+        <span class="result-name"></span>
+        <span class="result-sub"></span>
+      </span>
+      <span class="result-kcal">${f.k}</span>
+      <span class="result-fav ${favs.includes(f.id) ? 'on' : ''}">★</span>`;
+    btn.querySelector('.result-name').textContent = f.n;
+    btn.querySelector('.result-sub').textContent =
+      `${f.k} ккал/100 г · Б${f.p} · Ж${f.f} · У${f.c}${f.brand ? ' · ' + f.brand : ''}`;
+    btn.addEventListener('click', (e) => {
+      if (e.target.classList.contains('result-fav')) {
+        Store.cacheFood(f); // чтобы избранное работало и офлайн
+        const on = Store.toggleFavorite(f.id);
+        e.target.classList.toggle('on', on);
+        toast(on ? 'В избранное ★' : 'Убрано из избранного');
+        return;
+      }
+      Store.cacheFood(f);
       openPortionAdd(f);
     });
     return btn;

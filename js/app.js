@@ -8,10 +8,10 @@
     meal: 'breakfast',
     activeCat: 'Все',
     editId: null,
-    photo: { file: null, items: [] },
     foodCache: null,
     remoteSeq: 0,
     remoteTimer: null,
+    remoteStatus: 'idle',
   };
 
   /* ---------- Утилиты ---------- */
@@ -155,7 +155,7 @@
           row.innerHTML = `
             <div class="entry-main">
               <div class="entry-name"></div>
-              <div class="entry-meta">${fmt(e.grams)} г · ${fmt(e.kcal100)} ккал/100 г${e.source === 'photo' ? ' · 📷' : ''}</div>
+              <div class="entry-meta">${fmt(e.grams)} г · ${fmt(e.kcal100)} ккал/100 г</div>
             </div>
             <div class="entry-kcal">${fmt(e.kcal)}</div>
             <button class="entry-del" title="Удалить">✕</button>`;
@@ -193,7 +193,6 @@
     $('#searchInput').value = '';
     renderSearch('');
     renderFavs();
-    resetPhoto();
     switchTab('search');
     openOverlay('addOverlay');
     setTimeout(() => { if (window.innerWidth > 860) $('#searchInput').focus(); }, 250);
@@ -233,26 +232,49 @@
 
   function renderSearch(q) {
     const box = $('#searchResults');
+    const hasQuery = !!(q || '').trim();
     const results = searchFoods(q, state.activeCat);
     scheduleRemote(q);
 
+    const localHead = $('#localHead');
+    if (hasQuery && results.length) {
+      localHead.hidden = false;
+      localHead.textContent = `📱 Моя база · ${Math.min(results.length, 25)}`;
+    } else {
+      localHead.hidden = true;
+    }
+
     if (!results.length) {
-      box.innerHTML = `<div class="no-results"><b>Ничего не найдено</b>
-        Попробуйте другой запрос или добавьте продукт вручную
-        <div style="margin-top:14px"><button class="btn btn-ghost" id="addCustomBtn">＋ Свой продукт «${q.trim() || '...'}»</button></div>
-      </div>`;
-      $('#addCustomBtn').addEventListener('click', () => {
-        openPortionAdd({
-          id: '__custom',
-          n: q.trim() || 'Продукт',
-          k: 0, p: 0, f: 0, c: 0,
-          cat: 'Прочее', custom: true,
-        });
-      });
+      renderLocalEmpty(q);
       return;
     }
     box.innerHTML = '';
-    results.slice(0, 60).forEach((f) => box.appendChild(resultRow(f)));
+    results.slice(0, hasQuery ? 25 : 50).forEach((f) => box.appendChild(resultRow(f)));
+  }
+
+  function renderLocalEmpty(q) {
+    const query = (q || '').trim();
+    if (searchFoods(query, state.activeCat).length) return; // нашлось локально — не трогаем список
+    const box = $('#searchResults');
+    let title = 'Ничего не найдено';
+    let sub = 'Попробуйте другой запрос или добавьте продукт вручную';
+    if (query.length >= 2) {
+      if (state.remoteStatus === 'pending') { title = 'В моей базе пусто'; sub = 'Ищу в интернете…'; }
+      else if (state.remoteStatus === 'ok') { title = 'В моей базе пусто'; sub = 'Выберите выше результат из интернета или добавьте свой продукт'; }
+      else if (state.remoteStatus === 'empty') { title = 'Нигде не найдено'; sub = 'Попробуйте другой запрос или добавьте продукт вручную'; }
+      else if (state.remoteStatus === 'error') { title = 'Ничего не найдено'; sub = 'Интернет-поиск сейчас недоступен — попробуйте позже или добавьте вручную'; }
+    }
+    box.innerHTML = `<div class="no-results"><b>${title}</b> ${sub}
+      <div style="margin-top:14px"><button class="btn btn-ghost" id="addCustomBtn">＋ Свой продукт «${query || '...'}»</button></div>
+    </div>`;
+    $('#addCustomBtn').addEventListener('click', () => {
+      openPortionAdd({
+        id: '__custom',
+        n: query || 'Продукт',
+        k: 0, p: 0, f: 0, c: 0,
+        cat: 'Прочее', custom: true,
+      });
+    });
   }
 
   function resultRow(f) {
@@ -289,10 +311,12 @@
     box.innerHTML = '';
 
     if (query.length < 2 || state.activeCat !== 'Все') {
+      state.remoteStatus = 'idle';
       head.hidden = true;
       head.innerHTML = '';
       return;
     }
+    state.remoteStatus = 'pending';
     head.hidden = false;
     head.innerHTML = '<span class="spinner"></span>Ищу в открытой базе Open Food Facts…';
 
@@ -302,16 +326,20 @@
         const items = await OpenFood.search(query);
         if (seq !== state.remoteSeq) return;
         if (!items.length) {
+          state.remoteStatus = 'empty';
           head.innerHTML = '🌍 В интернете по запросу ничего не нашлось';
-          return;
+        } else {
+          state.remoteStatus = 'ok';
+          head.innerHTML = `🌍 Из интернета · Open Food Facts · ${items.length}`;
+          items.forEach((f) => box.appendChild(remoteRow(f)));
         }
-        head.innerHTML = `🌍 Из интернета · Open Food Facts · ${items.length}`;
-        items.forEach((f) => box.appendChild(remoteRow(f)));
       } catch (err) {
         if (seq !== state.remoteSeq) return;
+        state.remoteStatus = 'error';
         head.innerHTML = '🌍 Интернет-поиск сейчас недоступен (нет сети или база перегружена) — показаны локальные результаты';
       }
-    }, 550);
+      renderLocalEmpty(query);
+    }, 450);
   }
 
   function remoteRow(f) {
@@ -474,146 +502,6 @@
     renderToday();
   }
 
-  /* ---------- Фото ---------- */
-  function resetPhoto() {
-    state.photo = { file: null, items: [] };
-    $('#photoInput').value = '';
-    $('#photoCameraInput').value = '';
-    $('#dzPreview').hidden = true;
-    $('#dzInner').hidden = false;
-    $('#photoResults').hidden = true;
-    $('#photoRecognizeBtn').hidden = true;
-    $('#photoStatus').textContent = '';
-    $('#photoStatus').className = 'photo-status muted';
-  }
-
-  function onPhotoSelected(file) {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { toast('Нужен файл изображения'); return; }
-    state.photo.file = file;
-    const img = $('#dzPreview');
-    img.src = URL.createObjectURL(file);
-    img.hidden = false;
-    $('#dzInner').hidden = true;
-    $('#photoResults').hidden = true;
-    $('#photoRecognizeBtn').hidden = false;
-    $('#photoStatus').textContent = 'Фото готово — нажмите «Распознать»';
-    $('#photoStatus').className = 'photo-status muted';
-  }
-
-  async function runRecognition() {
-    const s = Store.settings();
-    const file = state.photo.file;
-    if (!file) { toast('Сначала выберите фото'); return; }
-    if (!s.apiKey) {
-      $('#photoStatus').innerHTML = `⚠️ Нужен API-ключ Gemini. Откройте <b>Настройки → Распознавание</b>, получите бесплатный ключ на <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> и вставьте его. Пока можно добавлять еду через поиск.`;
-      $('#photoStatus').className = 'photo-status error';
-      return;
-    }
-    const btn = $('#photoRecognizeBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Анализирую фото...';
-    $('#photoStatus').textContent = 'Модель определяет продукты и порции…';
-    $('#photoStatus').className = 'photo-status muted';
-    try {
-      const res = await Recognition.recognize(file, s.apiKey);
-      if (!res.items.length) {
-        $('#photoStatus').textContent = 'На фото не удалось распознать еду. Попробуйте другое фото или добавьте вручную.';
-        $('#photoStatus').className = 'photo-status error';
-      } else {
-        state.photo.items = res.items;
-        state.meal = defaultMeal();
-        $('#photoMeal').value = state.meal;
-        renderPhotoItems();
-        $('#photoResults').hidden = false;
-        $('#photoRecognizeBtn').hidden = true;
-        $('#photoStatus').textContent = res.note ? `📝 ${res.note}` : 'Готово! Проверьте и поправьте результат.';
-        $('#photoStatus').className = 'photo-status muted';
-      }
-    } catch (err) {
-      console.error(err);
-      let msg = 'Ошибка запроса к API: ' + (err.message || err);
-      if (err.code === 'no_key') msg = 'Введите API-ключ в настройках.';
-      if (String(err.message).includes('API 400') || String(err.message).includes('API 403')) msg = 'Ключ не принят. Проверьте API-ключ в настройках.';
-      $('#photoStatus').textContent = msg;
-      $('#photoStatus').className = 'photo-status error';
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = '🔍 Распознать';
-    }
-  }
-
-  function confBadge(c) {
-    const cls = c >= 0.8 ? 'high' : c >= 0.55 ? 'mid' : 'low';
-    const txt = c >= 0.8 ? 'точно' : c >= 0.55 ? 'проверьте' : 'низкая точн.';
-    return `<span class="conf ${cls}">${txt} ${Math.round(c * 100)}%</span>`;
-  }
-
-  function renderPhotoItems() {
-    const box = $('#photoItems');
-    box.innerHTML = '';
-    state.photo.items.forEach((it, i) => {
-      const row = document.createElement('div');
-      row.className = 'pitem';
-      row.innerHTML = `
-        <div class="pitem-top">
-          <input type="text" data-k="name" value="" placeholder="Название" />
-          ${confBadge(it.confidence)}
-          <button class="pitem-x" title="Убрать">✕</button>
-        </div>
-        <div class="pitem-grid">
-          <label class="field"><span>грамм</span><input type="number" data-k="grams" value="${it.grams}" min="1" max="3000" /></label>
-          <label class="field"><span>ккал/100</span><input type="number" data-k="kcal100" value="${Math.round(it.kcal100)}" min="0" max="900" /></label>
-          <label class="field"><span>Б, г</span><input type="number" data-k="p" value="${round1(it.p)}" min="0" max="100" step="0.1" /></label>
-          <label class="field"><span>Ж, г</span><input type="number" data-k="f" value="${round1(it.f)}" min="0" max="100" step="0.1" /></label>
-          <label class="field"><span>У, г</span><input type="number" data-k="c" value="${round1(it.c)}" min="0" max="100" step="0.1" /></label>
-        </div>`;
-      row.querySelector('[data-k="name"]').value = it.name;
-      row.querySelector('.pitem-x').addEventListener('click', () => {
-        state.photo.items.splice(i, 1);
-        renderPhotoItems();
-        if (!state.photo.items.length) {
-          $('#photoResults').hidden = true;
-          $('#photoRecognizeBtn').hidden = false;
-        }
-      });
-      $$('input', row).forEach((inp) => {
-        inp.addEventListener('input', () => {
-          const k = inp.dataset.k;
-          state.photo.items[i][k] = k === 'name' ? inp.value : Number(inp.value) || 0;
-          updatePhotoTotal();
-        });
-      });
-      box.appendChild(row);
-    });
-    updatePhotoTotal();
-  }
-  const round1 = (v) => Math.round(Number(v) * 10) / 10;
-
-  function updatePhotoTotal() {
-    const total = state.photo.items.reduce((a, it) => a + (it.grams / 100) * it.kcal100, 0);
-    $('#photoTotal').textContent = `Итого: ${fmt(total)} ккал`;
-  }
-
-  function confirmPhoto() {
-    const items = state.photo.items.filter((it) => it.name && it.grams > 0);
-    if (!items.length) { toast('Нет продуктов для добавления'); return; }
-    const meal = $('#photoMeal').value;
-    items.forEach((it) => {
-      const r = it.grams / 100;
-      Store.addEntry(state.dateKey, {
-        name: it.name.trim(), grams: it.grams, kcal100: it.kcal100,
-        kcal: r * it.kcal100, p: r * it.p, f: r * it.f, c: r * it.c,
-        meal, source: 'photo',
-      });
-    });
-    const total = items.reduce((a, it) => a + (it.grams / 100) * it.kcal100, 0);
-    closeOverlay('addOverlay');
-    renderToday();
-    toast(`Добавлено ${items.length} поз. · ${fmt(total)} ккал`);
-    resetPhoto();
-  }
-
   /* ---------- История ---------- */
   function renderHistory() {
     const all = Store.allEntries();
@@ -707,7 +595,6 @@
     $('#setHeight').value = s.height;
     $('#setWeight').value = s.weight;
     $('#setActivity').value = String(s.activity);
-    $('#setApiKey').value = s.apiKey;
     $('#setPlan').value = s.plan || 'keep';
   }
 
@@ -729,39 +616,6 @@
     bind('#setWeight', 'weight');
     bind('#setActivity', 'activity');
     bind('#setPlan', 'plan', false);
-    $('#setApiKey').addEventListener('change', (e) => {
-      Store.setSetting('apiKey', e.target.value.trim());
-      $('#keyStatus').textContent = e.target.value.trim() ? 'Ключ сохранён в этом браузере.' : '';
-    });
-
-    $('#toggleKeyBtn').addEventListener('click', () => {
-      const inp = $('#setApiKey');
-      const show = inp.type === 'password';
-      inp.type = show ? 'text' : 'password';
-      $('#toggleKeyBtn').textContent = show ? 'Скрыть' : 'Показать';
-    });
-
-    $('#testKeyBtn').addEventListener('click', async () => {
-      const key = $('#setApiKey').value.trim();
-      const st = $('#keyStatus');
-      if (!key) { st.textContent = 'Введите ключ.'; return; }
-      st.textContent = 'Проверяю…';
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: 'Ответь одним словом: ок' }] }] }),
-        });
-        if (res.ok) {
-          st.textContent = '✅ Ключ работает.';
-          Store.setSetting('apiKey', key);
-        } else {
-          st.textContent = `❌ Ошибка ${res.status}. Проверьте ключ.`;
-        }
-      } catch {
-        st.textContent = '❌ Нет сети / нет доступа к API.';
-      }
-    });
 
     $('#calcGoalBtn').addEventListener('click', () => {
       const s = Store.settings();
@@ -839,7 +693,6 @@
   function fillMealSelects() {
     const html = MEALS.map((m) => `<option value="${m.id}">${m.emoji} ${m.label}</option>`).join('');
     $('#portionMeal').innerHTML = html;
-    $('#photoMeal').innerHTML = html;
   }
 
   function renderCatChips() {
@@ -887,7 +740,7 @@
     });
     $('#searchInput').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        const first = $('#searchResults .result');
+        const first = document.querySelector('#remoteResults .result, #searchResults .result');
         if (first) first.click();
       }
     });
@@ -917,20 +770,6 @@
       renderToday();
       toast('Запись удалена');
     });
-
-    // фото
-    $('#photoInput').addEventListener('change', (e) => onPhotoSelected(e.target.files[0]));
-    $('#photoCameraInput').addEventListener('change', (e) => onPhotoSelected(e.target.files[0]));
-    $('#photoRecognizeBtn').addEventListener('click', runRecognition);
-    $('#photoConfirmBtn').addEventListener('click', confirmPhoto);
-    $('#photoAddMoreBtn').addEventListener('click', () => {
-      state.photo.items.push({ name: '', grams: 100, kcal100: 100, p: 5, f: 5, c: 15, confidence: 1 });
-      renderPhotoItems();
-    });
-    const dz = $('#dropzone');
-    ['dragover', 'dragenter'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('drag'); }));
-    ['dragleave', 'drop'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
-    dz.addEventListener('drop', (e) => onPhotoSelected(e.dataTransfer.files[0]));
 
     // тема
     $('#themeToggle').addEventListener('click', () => {

@@ -143,13 +143,7 @@
 
         <div class="card settings-card">
           <div class="card-title">☁️ Аккаунт <span class="muted">данные в облаке</span></div>
-          <div id="accountSetup" class="notice" hidden>
-            Чтобы включить облако: создайте проект на
-            <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a>,
-            добавьте веб-приложение, скопируйте конфиг в <b>js/firebase-config.js</b>,
-            включите вход Email/Password и Google в Authentication, создайте Firestore с правилами
-            <code>request.auth.uid == userId</code> и добавьте домен <b>hemch1k.github.io</b> в Authorized domains.
-          </div>
+          <div id="accountSetup" class="notice" hidden></div>
           <div id="accountGuest">
             <p class="hint">Сейчас дневник хранится только в этом браузере. Войдите — и записи, цели и избранное будут синхронизироваться между телефоном и компьютером.</p>
             <div class="field-grid">
@@ -226,20 +220,6 @@
         </div>
 
         <div class="card settings-card">
-          <div class="card-title">📷 Распознавание еды по фото</div>
-          <p class="hint">Используется модель Google Gemini (Flash). Ключ хранится <b>только в вашем браузере</b>. Получить бесплатный ключ:
-            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a></p>
-          <label class="field"><span>API-ключ Gemini</span>
-            <input type="password" id="setApiKey" placeholder="AIza..." autocomplete="off" />
-          </label>
-          <div class="row-gap">
-            <button class="btn btn-ghost" id="toggleKeyBtn">Показать</button>
-            <button class="btn btn-ghost" id="testKeyBtn">Проверить ключ</button>
-          </div>
-          <p class="hint" id="keyStatus"></p>
-        </div>
-
-        <div class="card settings-card">
           <div class="card-title">💾 Данные</div>
           <div class="row-gap">
             <button class="btn btn-ghost" id="exportBtn">Экспорт JSON</button>
@@ -249,7 +229,7 @@
           <p class="hint">Данные хранятся локально на устройстве. Экспорт пригодится для переноса на другой телефон или компьютер.</p>
         </div>
 
-        <p class="muted footer-note">КалоМетр · работает офлайн · данные не покидают устройство</p>
+        <p class="muted footer-note">КалоМетр · работает офлайн · ваши данные под вашим контролем</p>
       </section>
     </main>
 
@@ -282,7 +262,6 @@
 
       <div class="tabs" id="addTabs">
         <button class="tab active" data-tab="search">🔎 Поиск</button>
-        <button class="tab" data-tab="photo">📷 Фото</button>
         <button class="tab" data-tab="fav">⭐ Избранное</button>
       </div>
 
@@ -292,50 +271,15 @@
           <input type="search" id="searchInput" placeholder="Например: гречка, банан, творог..." autocomplete="off" />
         </div>
         <div class="chips" id="catChips"></div>
-        <div class="results" id="searchResults"></div>
         <div class="remote-head" id="remoteHead" hidden></div>
         <div class="results" id="remoteResults"></div>
+        <div class="remote-head" id="localHead" hidden></div>
+        <div class="results" id="searchResults"></div>
       </div>
 
       <!-- Избранное -->
       <div class="tab-pane" id="pane-fav">
         <div class="results" id="favResults"></div>
-      </div>
-
-      <!-- Фото -->
-      <div class="tab-pane" id="pane-photo">
-        <div class="dropzone" id="dropzone">
-          <label class="dz-main" for="photoInput">
-            <div class="dz-inner" id="dzInner">
-              <span class="dz-icon">📷</span>
-              <b>Выберите фото еды</b>
-              <span class="muted">Из галереи или снимите камерой</span>
-            </div>
-            <img class="dz-preview" id="dzPreview" alt="" hidden />
-          </label>
-          <div class="dz-actions">
-            <label class="btn btn-ghost" for="photoInput">🖼️ Из галереи</label>
-            <label class="btn btn-primary" for="photoCameraInput">📷 Снять фото</label>
-          </div>
-          <input type="file" id="photoInput" accept="image/*" hidden />
-          <input type="file" id="photoCameraInput" accept="image/*" capture="environment" hidden />
-        </div>
-        <div class="photo-status muted" id="photoStatus"></div>
-        <div id="photoResults" hidden>
-          <div class="notice">
-            Проверьте и поправьте результат: название, массу и калорийность на 100 г.
-          </div>
-          <div id="photoItems" class="photo-items"></div>
-          <div class="photo-actions">
-            <button class="btn btn-ghost" id="photoAddMoreBtn">＋ ещё продукт</button>
-            <label class="field inline-field"><span>Приём пищи</span>
-              <select id="photoMeal"></select>
-            </label>
-          </div>
-          <div class="photo-total" id="photoTotal">Итого: 0 ккал</div>
-          <button class="btn btn-primary wide" id="photoConfirmBtn">Добавить в дневник</button>
-        </div>
-        <button class="btn btn-primary wide" id="photoRecognizeBtn" hidden>🔍 Распознать</button>
       </div>
     </div>
   </div>
@@ -397,9 +341,9 @@
   <script src="js/foods.js"></script>
   <script src="js/off.js"></script>
   <script src="js/store.js"></script>
+  <script src="js/supabase-config.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/cloud.js"></script>
-  <script src="js/recognition.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

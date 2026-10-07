@@ -8,7 +8,6 @@ const Store = (() => {
       proteinGoal: 120,
       fatGoal: 70,
       carbGoal: 250,
-      apiKey: '',
       theme: 'dark',
       autoGoal: false,
       weight: 70,

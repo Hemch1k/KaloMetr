@@ -12,6 +12,9 @@
     remoteSeq: 0,
     remoteTimer: null,
     remoteStatus: 'idle',
+    portionPhoto: null,
+    portionPhotoOrig: null,
+    portionPhotoTouched: false,
   };
 
   /* ---------- Утилиты ---------- */
@@ -163,15 +166,75 @@
           row.querySelector('.entry-main').addEventListener('click', () => openPortionEdit(e));
           row.querySelector('.entry-del').addEventListener('click', (ev) => {
             ev.stopPropagation();
-            Store.deleteEntry(key, e.id);
+            deleteEntryWithPhoto(key, e.id);
             renderToday();
             toast('Запись удалена');
           });
+          if (e.photo) {
+            const th = document.createElement('button');
+            th.type = 'button';
+            th.className = 'entry-thumb';
+            th.title = 'Показать фото';
+            th.setAttribute('aria-label', 'Показать фото блюда');
+            Photos.get(e.photo).then((url) => {
+              if (url) th.innerHTML = `<img src="${url}" alt="">`;
+              else th.textContent = '🖼';
+            }).catch(() => { th.textContent = '🖼'; });
+            th.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              openPhotoViewer(e.photo);
+            });
+            row.insertBefore(th, row.firstChild);
+          }
           card.appendChild(row);
         });
       }
       wrap.appendChild(card);
     });
+  }
+
+  function deleteEntryWithPhoto(key, id) {
+    const e = Store.entriesFor(key).find((x) => x.id === id);
+    Store.deleteEntry(key, id);
+    if (e && e.photo) Photos.del(e.photo).catch(() => {});
+  }
+
+  function openPhotoViewer(id) {
+    Photos.get(id).then((url) => {
+      if (!url) {
+        toast('Фото не найдено на этом устройстве');
+        return;
+      }
+      $('#photoFull').src = url;
+      openOverlay('photoOverlay');
+    }).catch(() => toast('Фото не найдено на этом устройстве'));
+  }
+
+  function renderPortionPhoto() {
+    const p = state.portionPhoto;
+    const box = $('#paPreview');
+    if (p && p.dataURL) {
+      $('#paImg').src = p.dataURL;
+      box.hidden = false;
+    } else {
+      $('#paImg').removeAttribute('src');
+      box.hidden = true;
+    }
+  }
+
+  async function onPhotoPick(input) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      const dataURL = await Photos.compress(file);
+      state.portionPhoto = { id: null, dataURL };
+      state.portionPhotoTouched = true;
+      renderPortionPhoto();
+      toast('Фото прикреплено');
+    } catch (_) {
+      toast('Не удалось прочитать это фото');
+    }
   }
 
   function shiftDay(delta) {
@@ -398,6 +461,10 @@
 
   function openPortionAdd(f) {
     state.editId = null;
+    state.portionPhoto = null;
+    state.portionPhotoOrig = null;
+    state.portionPhotoTouched = false;
+    renderPortionPhoto();
     const data = portionFoodData(f);
     $('#portionTitle').textContent = f.custom ? 'Свой продукт' : 'Порция';
     $('#portionName').textContent = data.name;
@@ -417,6 +484,18 @@
 
   function openPortionEdit(e) {
     state.editId = e.id;
+    state.portionPhoto = null;
+    state.portionPhotoOrig = e.photo || null;
+    state.portionPhotoTouched = false;
+    renderPortionPhoto();
+    if (e.photo) {
+      Photos.get(e.photo).then((url) => {
+        if (url && state.editId === e.id && !state.portionPhotoTouched) {
+          state.portionPhoto = { id: e.photo, dataURL: url };
+          renderPortionPhoto();
+        }
+      }).catch(() => {});
+    }
     $('#portionTitle').textContent = 'Редактирование';
     $('#portionName').textContent = e.name;
     $('#portionPer100').textContent = `${fmt(e.kcal100)} ккал / 100 г`;
@@ -480,24 +559,49 @@
     $('#portionPer100').textContent = `${fmt(k100)} ккал / 100 г`;
   }
 
-  function savePortion() {
+  async function savePortion() {
     const data = currentPortion();
     if (data.grams <= 0) { toast('Укажите вес порции'); return; }
+
+    if (state.portionPhotoTouched) {
+      const p = state.portionPhoto;
+      try {
+        if (p && p.dataURL) {
+          if (!p.id) {
+            const newId = await Photos.put(p.dataURL);
+            if (state.portionPhotoOrig && state.portionPhotoOrig !== newId) {
+              await Photos.del(state.portionPhotoOrig);
+            }
+            p.id = newId;
+          }
+          state.portionPhotoOrig = p.id;
+        } else if (state.portionPhotoOrig) {
+          await Photos.del(state.portionPhotoOrig);
+          state.portionPhotoOrig = null;
+        }
+      } catch (e) {
+        console.warn('photo save failed', e);
+      }
+      state.portionPhotoTouched = false;
+    }
+
+    const payload = {
+      name: data.name, grams: data.grams, kcal100: data.kcal100,
+      kcal: data.kcal, p: data.p, f: data.f, c: data.c, meal: data.meal,
+      photo: state.portionPhotoOrig || null,
+    };
+
     if (state.editId) {
-      Store.updateEntry(state.dateKey, state.editId, {
-        name: data.name, grams: data.grams, kcal100: data.kcal100,
-        kcal: data.kcal, p: data.p, f: data.f, c: data.c, meal: data.meal,
-      });
+      Store.updateEntry(state.dateKey, state.editId, payload);
       toast('Изменения сохранены');
     } else {
-      Store.addEntry(state.dateKey, {
-        name: data.name, grams: data.grams, kcal100: data.kcal100,
-        kcal: data.kcal, p: data.p, f: data.f, c: data.c, meal: data.meal,
-        source: 'manual',
-      });
+      Store.addEntry(state.dateKey, { ...payload, source: 'manual' });
       toast(`+${fmt(data.kcal)} ккал`);
       if ($('#addOverlay').classList.contains('open')) closeOverlay('addOverlay');
     }
+    state.portionPhoto = null;
+    state.portionPhotoOrig = null;
+    state.portionPhotoTouched = false;
     closeOverlay('portionOverlay');
     renderToday();
   }
@@ -673,6 +777,7 @@
       if (!confirm('Удалить ВСЕ данные дневника (включая облако, если вы вошли)? Это действие необратимо.')) return;
       const wasInCloud = typeof Cloud !== 'undefined' && Cloud.isSignedIn();
       Store.reset();
+      Photos.clear().catch(() => {});
       if (wasInCloud) Cloud.wipe();
       state.foodCache = null;
       applyTheme();
@@ -764,11 +869,23 @@
     $('#portionDeleteBtn').addEventListener('click', () => {
       if (!state.editId) return;
       if (!confirm('Удалить эту запись?')) return;
-      Store.deleteEntry(state.dateKey, state.editId);
+      deleteEntryWithPhoto(state.dateKey, state.editId);
       state.editId = null;
+      state.portionPhoto = null;
+      state.portionPhotoOrig = null;
+      state.portionPhotoTouched = false;
       closeOverlay('portionOverlay');
       renderToday();
       toast('Запись удалена');
+    });
+
+    // фото записи
+    $('#paFileInput').addEventListener('change', (e) => onPhotoPick(e.target));
+    $('#paCamInput').addEventListener('change', (e) => onPhotoPick(e.target));
+    $('#paRemove').addEventListener('click', () => {
+      state.portionPhoto = null;
+      state.portionPhotoTouched = true;
+      renderPortionPhoto();
     });
 
     // тема

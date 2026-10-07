@@ -1,4 +1,4 @@
-const CACHE = 'kalometr-v4';
+const CACHE = 'kalometr-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const ASSETS = [
   './js/supabase-config.js',
   './js/firebase-config.js',
   './js/cloud.js',
+  './js/photos.js',
   './js/app.js',
   './manifest.json',
 ];
@@ -26,7 +27,7 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  if (url.origin !== location.origin) return; // API-запросы (Gemini) не трогаем
+  if (url.origin !== location.origin) return; // внешние API (Open Food Facts, Supabase) не трогаем
   e.respondWith(
     caches.match(e.request).then((cached) => cached || fetch(e.request).then((res) => {
       if (e.request.method === 'GET' && res.ok) {

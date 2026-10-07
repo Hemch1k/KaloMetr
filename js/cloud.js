@@ -48,9 +48,11 @@ create policy "own days" on public.user_days
 
   const SETUP_NONE = `Чтобы включить облако, выберите провайдер:
     <ol class="setup-steps">
-      <li><b>Supabase</b> (рекомендуется): создайте проект, выполните SQL-скрипт, вставьте URL и anon-ключ в <code>js/supabase-config.js</code>.</li>
+      <li><b>Supabase</b> (рекомендуется): создайте проект, выполните SQL-скрипт ниже, вставьте URL и anon-ключ в <code>js/supabase-config.js</code>.</li>
       <li><b>Firebase</b>: создайте проект, вставьте конфиг в <code>js/firebase-config.js</code>, настройте Authentication и Firestore.</li>
-    </ol>`;
+    </ol>
+    <button type="button" class="btn btn-ghost btn-sm" id="copySqlBtn">Скопировать SQL</button>
+    <pre class="sql-box"><code id="sqlBox">${SQL}</code></pre>`;
 
   const ERR = {
     'auth/invalid-email': 'Некорректный e-mail',

@@ -25,7 +25,9 @@ alter table public.user_days enable row level security;
 create policy "own meta" on public.user_meta
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "own days" on public.user_days
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);`;
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+alter publication supabase_realtime add table public.user_days;
+alter publication supabase_realtime add table public.user_meta;`;
 
   const SETUP_SUPA = `Чтобы включить облако:
     <ol class="setup-steps">
@@ -116,6 +118,12 @@ create policy "own days" on public.user_days
       const base = String(SUPABASE_CONFIG.url || '').replace(/\/+$/, '').replace(/\/rest\/v1$/i, '');
       this.sb = mod.createClient(base, SUPABASE_CONFIG.anonKey, {
         auth: { persistSession: true, autoRefreshToken: true },
+        realtime: {
+          accessToken: async () => {
+            const { data } = await this.sb.auth.getSession();
+            return data.session ? data.session.access_token : '';
+          },
+        },
       });
       this.sb.auth.onAuthStateChange((event, session) => {
         // внутри колбэка нельзя вызывать auth-методы (дедлок) — откладываем
@@ -143,6 +151,23 @@ create policy "own days" on public.user_days
     async logout() {
       const { error } = await this.sb.auth.signOut();
       if (error) throw error;
+    },
+    channel: null,
+    watch(u) {
+      this.unwatch();
+      if (!u || !this.sb || typeof this.sb.channel !== 'function') return;
+      try {
+        this.channel = this.sb
+          .channel('calometr-sync-' + u.uid)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'user_days', filter: 'user_id=eq.' + u.uid }, () => scheduleAutoPull(300))
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'user_meta', filter: 'user_id=eq.' + u.uid }, () => scheduleAutoPull(300))
+          .subscribe((status) => {
+            if (status === 'CHANNEL_ERROR') console.warn('Realtime: нет событий (нужен ALTER PUBLICATION supabase_realtime — см. SQL-скрипт)');
+          });
+      } catch (e) { console.warn('realtime watch', e); }
+    },
+    unwatch() {
+      if (this.channel) { try { this.sb.removeChannel(this.channel); } catch (_) {} this.channel = null; }
     },
     async pull() {
       const { data: rows, error } = await this.sb.from('user_days').select('day, entries, updated_at');
@@ -266,6 +291,8 @@ create policy "own days" on public.user_days
     const was = user && user.uid;
     const now = u && u.uid;
     user = u;
+    if (api && api.unwatch && !u) api.unwatch();
+    if (u && was !== now && api && api.watch) api.watch(u);
     if (u && was !== now) {
       info = 'Загружаю данные из облака…';
       render();
@@ -320,6 +347,37 @@ create policy "own days" on public.user_days
     clearTimeout(pushTimer);
     if (!user) return;
     pushTimer = setTimeout(push, immediate ? 0 : 1500);
+  }
+
+  /* ================= Авто-подтягивание из облака ================= */
+  let autoPullTimer = null;
+  let lastPullAt = 0;
+  let autoPullBusy = false;
+
+  function scheduleAutoPull(delay = 400) {
+    if (mode !== 'ready' || !user || !api) return;
+    clearTimeout(autoPullTimer);
+    autoPullTimer = setTimeout(async () => {
+      if (document.hidden || !user || !api || autoPullBusy) return;
+      if (Date.now() - lastPullAt < 5000) return;
+      autoPullBusy = true;
+      try {
+        await api.pull();
+        lastPullAt = Date.now();
+        fireDataChanged();
+      } catch (e) {
+        console.warn('auto pull error', e);
+      } finally {
+        autoPullBusy = false;
+      }
+    }, delay);
+  }
+
+  function bindAutoPull() {
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleAutoPull(200); });
+    window.addEventListener('focus', () => scheduleAutoPull(200));
+    window.addEventListener('online', () => scheduleAutoPull(0));
+    setInterval(() => { if (!document.hidden) scheduleAutoPull(0); }, 45000);
   }
 
   /* ================= Действия пользователя ================= */
@@ -450,7 +508,7 @@ create policy "own days" on public.user_days
     });
   }
 
-  document.addEventListener('DOMContentLoaded', () => { bind(); init(); });
+  document.addEventListener('DOMContentLoaded', () => { bind(); bindAutoPull(); init(); });
 
   return { isSignedIn, wipe, schedulePush, init, get provider() { return provider; } };
 })();

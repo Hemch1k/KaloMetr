@@ -906,7 +906,9 @@
     document.addEventListener('cloud-data-changed', () => {
       state.foodCache = null;
       renderToday();
-      if ($('#screen-settings').classList.contains('active')) renderSettings();
+      const ae = document.activeElement;
+      const typing = ae && ae.closest && ae.closest('#screen-settings .field');
+      if ($('#screen-settings').classList.contains('active') && !typing) renderSettings();
     });
 
     applyTheme();

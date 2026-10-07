@@ -2,6 +2,6 @@
 // реальную защиту дают правила Row Level Security.
 // Dashboard → Project Settings → API → Project URL и anon public → вставить сюда.
 const SUPABASE_CONFIG = {
-  url: '',      // напр. "https://abcdefghij.supabase.co"
-  anonKey: '',  // напр. "eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+  url: 'https://ujnmqgflkgkuzfrtwthd.supabase.co',
+  anonKey: 'sb_publishable_KvBAIHZ55SE5mafc9qSXmw_MMd80cZH',
 };

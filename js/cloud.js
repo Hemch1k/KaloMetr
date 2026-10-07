@@ -1,4 +1,4 @@
-// Облако: авторизация (e-mail/пароль + Google) и синхронизация дневника.
+// Облако: авторизация (e-mail/пароль) и синхронизация дневника.
 // Провайдер выбирается автоматически: заполнен SUPABASE_CONFIG → Supabase,
 // иначе FIREBASE_CONFIG → Firebase, иначе — облако выключено.
 // Данные хранятся в аккаунте пользователя, локально остаётся рабочая копия.
@@ -35,15 +35,14 @@ create policy "own days" on public.user_days
         <pre class="sql-box"><code id="sqlBox">${SQL}</code></pre></li>
       <li><b>Project Settings → API</b> → <b>Project URL</b> и <b>anon public</b> ключ впишите в <b>js/supabase-config.js</b>.</li>
       <li><b>Authentication → URL Configuration</b> → Site URL и Redirect URLs: <code>https://hemch1k.github.io/KaloMetr/</code>.
-        В <b>Authentication → Providers → Email</b> можно выключить <i>Confirm email</i>, чтобы не подтверждать почту.
-        Для входа через Google включите провайдер Google там же.</li>
+        В <b>Authentication → Providers → Email</b> можно выключить <i>Confirm email</i>, чтобы не подтверждать почту.</li>
       <li>Обновите страницу.</li>
     </ol>`;
 
   const SETUP_FB = `Чтобы включить облако: создайте проект на
     <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a>,
     добавьте веб-приложение, скопируйте конфиг в <b>js/firebase-config.js</b>,
-    включите вход Email/Password и Google в Authentication, создайте Firestore с правилами
+    включите вход Email/Password в Authentication, создайте Firestore с правилами
     <code>request.auth.uid == userId</code> и добавьте домен <b>hemch1k.github.io</b> в Authorized domains.`;
 
   const SETUP_NONE = `Чтобы включить облако, выберите провайдер:
@@ -65,12 +64,8 @@ create policy "own days" on public.user_days
     'auth/user-not-found': 'Аккаунт с таким e-mail не найден',
     'auth/too-many-requests': 'Слишком много попыток, попробуйте позже',
     'auth/network-request-failed': 'Нет сети — проверьте подключение',
-    'auth/popup-blocked': 'Браузер заблокировал окно входа (разрешите всплывающие окна)',
-    'auth/popup-closed-by-user': 'Окно входа закрыто',
-    'auth/cancelled-popup-request': 'Вход отменён',
-    'auth/unauthorized-domain': 'Домен не добавлен в Authorized domains Firebase-консоли',
     'auth/operation-not-allowed': 'Способ входа выключен в Firebase → Authentication → Sign-in method',
-    'auth/configuration-not-found': 'Включите нужный способ входа в Firebase (Email/Password, Google)',
+    'auth/configuration-not-found': 'Включите вход Email/Password в Firebase (Authentication → Sign-in method)',
     'permission-denied': 'Нет доступа: проверьте правила (см. инструкцию настройки)',
   };
 
@@ -118,7 +113,8 @@ create policy "own days" on public.user_days
     sb: null,
     async init() {
       const mod = await import(SUPA_CDN);
-      this.sb = mod.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
+      const base = String(SUPABASE_CONFIG.url || '').replace(/\/+$/, '').replace(/\/rest\/v1$/i, '');
+      this.sb = mod.createClient(base, SUPABASE_CONFIG.anonKey, {
         auth: { persistSession: true, autoRefreshToken: true },
       });
       this.sb.auth.onAuthStateChange((event, session) => {
@@ -143,33 +139,6 @@ create policy "own days" on public.user_days
       const { data, error } = await this.sb.auth.signUp({ email, password: pass });
       if (error) throw error;
       if (!data.session) info = 'Подтвердите e-mail по письму от Supabase и нажмите «Войти»';
-    },
-    async google() {
-      const redirectTo = location.origin + location.pathname;
-      const { data, error } = await this.sb.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo, skipHttpRedirect: true },
-      });
-      if (error) throw error;
-      const url = data && data.url;
-      if (!url) throw { message: 'Не удалось начать вход через Google' };
-      const w = window.open(url, 'calometr_oauth', 'width=520,height=660');
-      if (!w) { location.href = url; return; } // popup заблокирован → полная страница
-      const started = Date.now();
-      await new Promise((resolve) => {
-        const tick = async () => {
-          try {
-            const { data: s } = await this.sb.auth.getSession();
-            if (s.session) { try { w.close(); } catch (_) {} resolve(); return; }
-          } catch (_) {}
-          if (w.closed || Date.now() - started > 90000) { resolve(); return; }
-          setTimeout(tick, 500);
-        };
-        tick();
-      });
-      const { data: s } = await this.sb.auth.getSession();
-      if (s.session) onUser(supa.toUser(s.session.user));
-      else if (!user) info = 'Вход через Google не завершён';
     },
     async logout() {
       const { error } = await this.sb.auth.signOut();
@@ -236,20 +205,6 @@ create policy "own days" on public.user_days
     },
     async login(email, pass) { await this.authMod.signInWithEmailAndPassword(this.auth, email, pass); },
     async register(email, pass) { await this.authMod.createUserWithEmailAndPassword(this.auth, email, pass); },
-    async google() {
-      const prov = new this.authMod.GoogleAuthProvider();
-      try {
-        await this.authMod.signInWithPopup(this.auth, prov);
-      } catch (e) {
-        if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(e.code)) {
-          info = 'Открываю страницу входа Google…';
-          render();
-          await this.authMod.signInWithRedirect(this.auth, prov);
-          return;
-        }
-        throw e;
-      }
-    },
     async logout() { await this.authMod.signOut(this.auth); },
     async pull() {
       const daysSnap = await this.fsMod.getDocs(this.fsMod.collection(this.db, 'users', user.uid, 'days'));
@@ -384,10 +339,6 @@ create policy "own days" on public.user_days
     });
   }
 
-  async function google() {
-    await act(async () => { await api.google(); });
-  }
-
   async function logout() {
     try {
       await api.logout();
@@ -462,7 +413,7 @@ create policy "own days" on public.user_days
     if (ready && user) {
       const name = user.name || (user.email || '').split('@')[0] || 'Пользователь';
       $('#accName').textContent = name;
-      $('#accEmail').textContent = user.email || 'вход через Google';
+      $('#accEmail').textContent = user.email || '';
       const av = $('#accAvatar');
       if (user.photo) { av.src = user.photo; av.hidden = false; } else { av.hidden = true; }
       const s = Store.state.sync || {};
@@ -473,16 +424,15 @@ create policy "own days" on public.user_days
       $('#accPending').hidden = !pending;
     }
     const disabled = !ready;
-    ['#authLoginBtn', '#authRegisterBtn', '#authGoogleBtn'].forEach((s) => { if ($(s)) $(s).disabled = disabled; });
+    ['#authLoginBtn', '#authRegisterBtn'].forEach((s) => { if ($(s)) $(s).disabled = disabled; });
   }
 
   function bind() {
-    ['#authLoginBtn', '#authRegisterBtn', '#authGoogleBtn'].forEach((sel) => {
+    ['#authLoginBtn', '#authRegisterBtn'].forEach((sel) => {
       const el = $(sel);
       if (el) el.addEventListener('click', () => {
         if (sel.includes('Login')) login();
-        else if (sel.includes('Register')) register();
-        else google();
+        else register();
       });
     });
     const pass = $('#authPass');

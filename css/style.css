@@ -271,8 +271,6 @@ h1 { font-size: 1.5rem; margin: 0; font-weight: 800; letter-spacing: -.02em; }
 .acc-avatar { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid var(--line); }
 .acc-id b { font-size: 1.02rem; }
 .acc-id .muted { font-size: .8rem; }
-.google-btn { gap: 10px; }
-.google-btn svg { flex: none; }
 .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
 #authStatus:empty { display: none; }
 .field { display: flex; flex-direction: column; gap: 6px; font-size: .85rem; color: var(--muted); }

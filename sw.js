@@ -1,4 +1,4 @@
-const CACHE = 'kalometr-v1';
+const CACHE = 'kalometr-v2';
 const ASSETS = [
   './',
   './index.html',
